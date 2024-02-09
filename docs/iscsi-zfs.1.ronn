@@ -1,0 +1,94 @@
+iscsi-zfs(1) -- iSCSI integration with ZFS
+================================================================================
+
+## SYNOPSIS
+
+`iscsi-zfs` <activate|deactivate|reload> <POOL>
+
+## DESCRIPTION
+iscsi-zfs is an addon for ZFS that enables iSCSI integration with ZFS pools via user
+properties.
+
+## USER PROPERTIES
+
+The following supported user properties control generation of iSCSI targets from
+a ZFS volume. Each volume can only be part of a single iSCSI target, but
+multiple volumes can be associated with the same iSCSI target as separate LUNs.
+
+All properties are grouped under the `iscsi` ZFS property module.
+
+* `iscsi:share` (bool):
+   Indicates whether the volume should be shared as part of an iSCSI target. Defaults to `off`.
+* `iscsi:target` (str):
+   The name of the iSCSI target to associate the volume with. Defaults to `iqn.YYYY-MM.<reverse-hostname>:zfs-`[`name-slug`][NAME SLUGS].
+* `iscsi:lun` (int):
+   The ID of the LUN to attach the volume as. If the ID is already taken, the next free ID is used instead. Defaults to `0`.
+* `iscsi:acls` (str):
+   A semicolon-separated list of ACL entries to add to the target.
+* `iscsi:chap` (bool):
+   Indicates whether to use CHAP authentication for the target. Defaults to `on`.
+* `iscsi:chap_credentials` (str):
+   A path to a file with the username and password to use for CHAP authentication. Required if `iscsi:chap` is `on`.
+   Defaults to `/etc/iscsi-zfs/chap.conf`.
+* `iscsi:portals` (str):
+   A semicolon-separated list of network portals in `address:port` format. Defaults to `0.0.0.0:3260`.
+
+## NAME SLUGS
+Generally, if you do not specify an explicit value for names, one will be
+generated for you based on a typical string slugging scheme. For example, if you
+have a ZVOL at `tank/images/my-volume`, the generated iSCSI target will look
+something like `iqn.2023-12.org.example.myhost:zfs-tank-images-my-volume`.
+
+## LISTS
+Some properties are lists of values. Since ZFS does not natively support
+multi-value properties, a semicolon is used as a value separator.
+
+## AUTHENTICATION
+By default, the program generates targets that require CHAP authentication
+without ACLs. You can disable CHAP and use ACLs only, or leave the ACL field
+empty to allow anyone to access the target. This is obviously an unsafe
+configuration which should only be used in trusted environments, and even then
+only if no other option is available.
+
+## SYSTEMD
+iscsi-zfs ships a parameterized systemd unit called `iscsi-zfs@.service`. This unit can be used as a systemd-based
+adapter for iSCSI-enabled pools when integration with other units or systems such as pacemaker is desired.
+
+## EXIT STATUS
+0 on success; otherwise, a nonzero value. Error information is printed to
+standard output.
+
+## FILES
+* /etc/iscsi-zfs/chap.conf:
+  Default location for CHAP authentication credentials.
+
+## EXAMPLES
+
+* `chap.conf`:
+   The CHAP authentication credentials file is a simple INI-style configuration file, containing a username and a
+   password.
+
+    [CHAP]<br>
+    Username=foo<br>
+    Password=bar
+
+* `iscsi-zfs` activate tank:
+   Activates all configured iSCSI targets for the pool "tank".
+
+* `iscsi-zfs` deactivate tank:
+   Deactivates all configured iSCSI targets for the pool "tank".
+
+* `iscsi-zfs` reload tank:
+   Reloads the iSCSI targets for the pool "tank".
+
+* `systemctl` start iscsi-zfs@tank:
+  Same as calling "`iscsi-zfs` activate tank", but integrated with systemd.
+
+* `systemctl` stop iscsi-zfs@tank:
+  Same as calling "`iscsi-zfs` deactivate tank", but integrated with systemd.
+
+* `systemctl` reload iscsi-zfs@tank:
+   Same as calling "`iscsi-zfs` reload tank", but integrated with systemd.
+
+## SEE ALSO
+zfs(1), zpool(1), targetcli(1)
