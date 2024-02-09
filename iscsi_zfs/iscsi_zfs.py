@@ -224,10 +224,8 @@ class ZFSiSCSIVolume:
         """
         Gets a filesystem path to a file containing the CHAP (Challenge Handshake Authentication Protocol) credentials
         to use for the iSCSI target associated with the volume. This value can be explicitly set via the
-        ``iscsi:chap_credentials`` ZFS property. If the property is not set, the path defaults to the first existing
-        file of the following:
-          - ``/etc/iscsi-zfs/chap.conf``
-          - ``./chap.conf``
+        ``iscsi:chap_credentials`` ZFS property. If the property is not set, the path defaults to
+        ``/etc/iscsi-zfs/chap.conf``.
 
         :return: The path to the credentials file.
         """
@@ -237,14 +235,8 @@ class ZFSiSCSIVolume:
         if iscsi_chap_credentials:
             return Path(iscsi_chap_credentials.value)
 
-        # then system-level default configuration
-        system_config_file = Path("/") / "etc" / "iscsi-zfs" / "chap.conf"
-        if system_config_file.exists():
-            return system_config_file
-
-        # then program-local default configuration
-        this_file_directory = pathlib.Path(__file__).parent.resolve()
-        return this_file_directory / "chap.conf"
+        # fall back to system-level default configuration
+        return Path("/") / "etc" / "iscsi-zfs" / "chap.conf"
 
     @cached_property
     def wwn(self) -> str:
@@ -735,10 +727,13 @@ class Program:
         managed_tpg.set_attribute("authentication", str(1 if use_chap else 0))
 
         credentials_path = next((volume.chap_credentials for volume in volumes), None)
-        if use_chap and credentials_path:
-            credentials = self._get_chap_credentials(credentials_path)
-            managed_tpg.chap_userid = credentials.username
-            managed_tpg.chap_password = credentials.password
+        if use_chap:
+            if credentials_path.exists():
+                credentials = self._get_chap_credentials(credentials_path)
+                managed_tpg.chap_userid = credentials.username
+                managed_tpg.chap_password = credentials.password
+            else:
+                logging.warning("No CHAP credentials available")
 
         for iscsi_volume in volumes:
             iscsi_volume.iscsi_target = managed_target
