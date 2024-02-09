@@ -844,15 +844,15 @@ def main() -> int:
     subparsers = parser.add_subparsers(help="sub-command help")
 
     activate_parser = subparsers.add_parser("activate", help="activate help")
-    activate_parser.add_argument('pool_name', required=True, help="The name of the pool to operate on")
+    activate_parser.add_argument('pool_name', help="The name of the pool to operate on")
     activate_parser.set_defaults(func=activate)
 
     deactivate_parser = subparsers.add_parser("deactivate", help="deactivate help")
-    deactivate_parser.add_argument('pool_name', required=True, help="The name of the pool to operate on")
+    deactivate_parser.add_argument('pool_name', help="The name of the pool to operate on")
     deactivate_parser.set_defaults(func=deactivate)
 
     reload_parser = subparsers.add_parser("reload", help="reload help")
-    reload_parser.add_argument('pool_name', required=True, help="The name of the pool to operate on")
+    reload_parser.add_argument('pool_name', help="The name of the pool to operate on")
     reload_parser.set_defaults(func=reload)
 
     args = parser.parse_args(sys.argv[1:])
