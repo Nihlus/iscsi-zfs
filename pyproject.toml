@@ -26,4 +26,4 @@ dependencies = [
 ]
 
 [project.scripts]
-iscsi-zfs = "iscsi_zfs:main"
+iscsi-zfs = "iscsi_zfs.iscsi_zfs:main"
