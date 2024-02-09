@@ -284,3 +284,8 @@ tags
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm+all,python,vim
 
+# pybuild
+.pybuild/
+
+# manpages
+iscsi-zfs.1

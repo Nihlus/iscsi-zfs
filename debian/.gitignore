@@ -1,7 +1,8 @@
 .debhelper/
-crystite/
+iscsi-zfs/
 
 debhelper-build-stamp
 files
 *.substvars
 *.debhelper
+
