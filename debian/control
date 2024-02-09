@@ -1,0 +1,25 @@
+Source: iscsi-zfs
+Section: contrib/python
+Priority: optional
+Maintainer: Jarl Gullberg <jarl.gullberg@gmail.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-hatchling (>= 0.15.0)
+Standards-Version: 4.6.2
+Homepage: https://github.com/truenas/py-libzfs
+Vcs-Browser: https://github.com/Nihlus/iscsi-zfs.git
+Vcs-Git: https://github.com/Nihlus/iscsi-zfs.git
+Testsuite: autopkgtest-pkg-python
+
+Package: iscsi-zfs
+Architecture: all
+Depends:
+  ${shlibs:Depends},
+  ${misc:Depends},
+  ${python3:Depends},
+  python3-libzfs (>=0.0+git20230207.c1bd4a0)
+Description: iSCSI integration for ZFS
+ iscsi-zfs is an addon to the ZFS filesystem, enabling iSCSI export of volumes
+ through the use of ZFS attributes.

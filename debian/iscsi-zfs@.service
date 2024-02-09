@@ -1,0 +1,11 @@
+[Unit]
+Description=iSCSI ZFS control service for pool "%i"
+Requires=zfs.target
+After=zfs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/iscsi-zfs activate %i
+ExecStop=/usr/bin/iscsi-zfs deactivate %i
+ExecReload=/usr/bin/iscsi-zfs reload %i

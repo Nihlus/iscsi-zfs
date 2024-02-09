@@ -1,0 +1,5 @@
+iscsi-zfs (1.0.0+deb12) stable; urgency=medium
+
+  * Initial release.
+
+ -- Jarl Gullberg <jarl.gullberg@gmail.com>  Fri, 09 Feb 2024 19:25:00 +0200

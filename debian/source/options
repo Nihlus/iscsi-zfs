@@ -1,0 +1,5 @@
+extend-diff-ignore = "^[^/]*[.]egg-info/"
+tar-ignore = ".idea"
+tar-ignore = ".git"
+tar-ignore = ".gitignore"
+tar-ignore = "venv"

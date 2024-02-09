@@ -1,0 +1,7 @@
+.debhelper/
+crystite/
+
+debhelper-build-stamp
+files
+*.substvars
+*.debhelper

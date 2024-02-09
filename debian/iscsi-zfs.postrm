@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+if systemctl is-active zfs-zed > /dev/null; then
+    deb-systemd-invoke restart zfs-zed
+fi
+
+#DEBHELPER#
+
