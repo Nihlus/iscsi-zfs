@@ -2,11 +2,13 @@ Source: iscsi-zfs
 Section: contrib/python
 Priority: optional
 Maintainer: Jarl Gullberg <jarl.gullberg@gmail.com>
-Build-Depends: debhelper-compat (= 13),
-               dh-python,
-               pybuild-plugin-pyproject,
-               python3-all,
-               python3-hatchling (>= 0.15.0)
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ pybuild-plugin-pyproject,
+ python3-all,
+ python3-hatchling (>= 0.15.0),
+ ronn (>=0.9),
 Standards-Version: 4.6.2
 Homepage: https://github.com/truenas/py-libzfs
 Vcs-Browser: https://github.com/Nihlus/iscsi-zfs.git
