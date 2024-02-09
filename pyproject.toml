@@ -1,0 +1,29 @@
+[build-system]
+requires = ["Hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iscsi-zfs"
+version = "1.0.0"
+authors = [
+    { name = "Jarl Gullberg", email = "jarl.gullberg@algiz.nu" }
+]
+description = "iSCSI integration for ZFS"
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: System :: Filesystems",
+    "Intended Audience :: Information Technology"
+]
+dependencies = [
+    "coloredlogs~=15.0.1",
+    "python-slugify~=4.0.0",
+    "rtslib-fb~=2.1.75",
+    "libzfs~=0.0"
+]
+
+[project.scripts]
+iscsi-zfs = "iscsi_zfs:main"
