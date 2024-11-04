@@ -22,7 +22,8 @@ dependencies = [
     "coloredlogs~=15.0.1",
     "python-slugify~=4.0.0",
     "rtslib-fb~=2.1.75",
-    "libzfs~=0.0"
+    "libzfs~=0.0",
+    "filelock~=3.9.0"
 ]
 
 [project.scripts]
