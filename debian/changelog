@@ -1,3 +1,9 @@
+iscsi-zfs (1.0.1+deb12) stable; urgency=medium
+
+  * Lock on the same lockfile as targetcli.
+
+ -- Jarl Gullberg <jarl.gullberg@gmail.com>  Mon, 04 Nov 2024 20:35:00 +0200
+
 iscsi-zfs (1.0.0+deb12) stable; urgency=medium
 
   * Initial release.
