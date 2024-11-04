@@ -14,6 +14,7 @@ import sys
 
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
+from filelock import FileLock
 from functools import cached_property
 from itertools import groupby
 from libzfs import ZFS, ZFSPool, ZFSDataset, DatasetType, ZFS_PROPERTY_CONVERTERS, ZfsConverter
@@ -851,7 +852,11 @@ def main() -> int:
     reload_parser.set_defaults(func=reload)
 
     args = parser.parse_args(sys.argv[1:])
-    return args.func(args)
+
+    # we use the same lockfile as targetcli, because we don't want step on each other's toes
+    logging.info("acquiring lock")
+    with FileLock("/var/run/targetcli.lock"):
+        return args.func(args)
 
 
 if __name__ == '__main__':
