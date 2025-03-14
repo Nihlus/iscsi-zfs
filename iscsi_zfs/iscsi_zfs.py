@@ -870,7 +870,10 @@ class Program:
                     continue
 
                 iscsi_share = dataset.properties.get("iscsi:share")
-                if not iscsi_share.parsed:
+
+                if not iscsi_share:
+                    iscsi_share = False
+                elif not iscsi_share.parsed:
                     continue
 
                 logging.debug(f"found iSCSI configuration for {dataset.name}")
