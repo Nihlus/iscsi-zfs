@@ -1,4 +1,4 @@
-iscsi-zfs (1.1.0+deb12~alpha1) UNRELEASED; urgency=medium
+iscsi-zfs (1.1.0+deb12) stable; urgency=medium
 
   * Implement support for targeting single datasets when activating,
     deactivating, and reloading iSCSI configuration.
