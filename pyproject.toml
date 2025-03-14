@@ -26,5 +26,8 @@ dependencies = [
     "filelock~=3.9.0"
 ]
 
+[tool.hatch.build.targets.wheel]
+packages = ["iscsi_zfs"]
+
 [project.scripts]
 iscsi-zfs = "iscsi_zfs.iscsi_zfs:main"
