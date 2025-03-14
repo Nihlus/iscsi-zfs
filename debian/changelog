@@ -1,3 +1,10 @@
+iscsi-zfs (1.1.0+deb12~alpha1) UNRELEASED; urgency=medium
+
+  * Implement support for targeting single datasets when activating,
+    deactivating, and reloading iSCSI configuration.
+
+ -- Jarl Gullberg <jarl.gullberg@gmail.com>  Fri, 14 Mar 2025 19:59:05 +0100
+
 iscsi-zfs (1.0.1+deb12) stable; urgency=medium
 
   * Lock on the same lockfile as targetcli.

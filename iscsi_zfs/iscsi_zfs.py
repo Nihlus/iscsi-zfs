@@ -485,7 +485,7 @@ class Program:
                 # find all volumes that belong to the iqn
                 iscsi_volumes = [volume for volume in iscsi_volumes if volume.target_iqn == dataset_iqn]
 
-            self._configure_targets(pool_name, iscsi_volumes)
+            self._configure_targets(iscsi_volumes)
         except Exception as e:
             logging.exception(e)
 
@@ -526,7 +526,7 @@ class Program:
 
                 target_iqn = dataset_volume.target_iqn
 
-                dataset_target = next((target for target in targets if target.wwn == target_iqn), None)
+                dataset_target = next((target for target in targets if target.wwn == str(target_iqn)), None)
 
                 if not dataset_target:
                     logging.info(f"target {target_iqn} not found; nothing to do")
@@ -544,11 +544,10 @@ class Program:
 
         return 0
 
-    def _configure_targets(self, pool_name: str, volumes: list[ZFSiSCSIVolume]) -> None:
+    def _configure_targets(self, volumes: list[ZFSiSCSIVolume]) -> None:
         """
         Configures iSCSI targets for the given set of iSCSI-enabled ZFS volumes.
 
-        :param pool_name: The name of the pool to operate on.
         :param volumes: The iSCSI-enabled ZFS volumes.
         """
 
@@ -562,17 +561,8 @@ class Program:
             lambda v: str(v.target_iqn)
         )
 
-        valid_managed_targets = [
-            self._configure_target(target_iqn, list(target_volumes)) for target_iqn, target_volumes in zfs_iscsi_targets
-        ]
-
-        logging.info("cleaning up")
-        targets_to_remove = [
-            target for target in self._get_managed_targets(pool_name)
-            if target not in valid_managed_targets
-        ]
-
-        self._remove_targets(targets_to_remove, "no longer referenced")
+        for target_iqn, target_volumes in zfs_iscsi_targets:
+            self._configure_target(target_iqn, list(target_volumes))
 
     @staticmethod
     def _remove_targets(targets: Iterable[Target], reason: str) -> None:
@@ -756,7 +746,7 @@ class Program:
 
             return lun.lun == volume.lun
 
-        volume_names = ' ,'.join([iscsi_volume.volume.name for iscsi_volume in volumes])
+        volume_names = ', '.join([iscsi_volume.volume.name for iscsi_volume in volumes])
 
         managed_target = find_managed_target(target_iqn, volumes[0].volume.pool.name)
         if not managed_target:
