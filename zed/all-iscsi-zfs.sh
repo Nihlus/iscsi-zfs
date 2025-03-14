@@ -11,7 +11,7 @@ case "${ZEVENT_CLASS}" in
     ;;
   sysevent.fs.zfs.history_event)
     if [[ "${ZEVENT_HISTORY_INTERNAL_NAME}" == "set" ]] && [[ "${ZEVENT_HISTORY_INTERNAL_STR}" =~ "iscsi:" ]]; then
-      /usr/bin/iscsi-zfs reload "${ZEVENT_POOL}"
+      /usr/bin/iscsi-zfs reload "${ZEVENT_POOL}" "${ZEVENT_HISTORY_DSNAME}"
     fi
     ;;
   *)
