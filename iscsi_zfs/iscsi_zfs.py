@@ -431,33 +431,31 @@ class Program:
 
         coloredlogs.install()
 
-    def reload(self, pool_name: str, dataset_name: str | None) -> int:
+    def reload(self, pool_or_dataset_name: str) -> int:
         """
-        Reloads the ZFS-based iSCSI configuration for the given pool (and optionally a specific dataset), deactivating
+        Reloads the ZFS-based iSCSI configuration for the given pool or dataset, deactivating
         and then activating all applicable targets.
 
-        :param pool_name: The name of the pool to operate on.
-        :param dataset_name: The name of the dataset to operate on. Defaults to all datasets.
+        :param pool_or_dataset_name: The name of the pool or dataset to operate on.
         :return: The return code of the program.
         """
 
-        return_code = self.deactivate(pool_name, dataset_name)
+        return_code = self.deactivate(pool_or_dataset_name)
         if return_code:
             return return_code
 
-        return_code = self.activate(pool_name, dataset_name)
+        return_code = self.activate(pool_or_dataset_name)
         if return_code:
             return return_code
 
         return 0
 
-    def activate(self, pool_name: str, dataset_name: str | None) -> int:
+    def activate(self, pool_or_dataset_name: str) -> int:
         """
         Activates ZFS-based iSCSI configuration, creating, updating, or deleting targets and backstores as
         required.
 
-        :param pool_name: The name of the pool to operate on.
-        :param dataset_name: The name of the dataset to operate on. Defaults to all datasets.
+        :param pool_or_dataset_name: The name of the pool or dataset to operate on.
         :return: The return code of the program.
         """
 
@@ -465,7 +463,12 @@ class Program:
         current_config = self._rts_root.dump()
 
         try:
-            logging.info("scanning for iSCSI configuration")
+            parts = pool_or_dataset_name.split('/')
+            pool_name = parts[0]
+            dataset_name = pool_or_dataset_name if len(parts) > 1 else None
+
+            logging.info(f"scanning for iSCSI configuration on {pool_or_dataset_name}")
+
             # pick out the enabled volumes only, ignoring the rest
             iscsi_volumes = [volume for volume in self._get_zfs_iscsi_volumes(pool_name) if volume.enabled]
 
@@ -492,12 +495,11 @@ class Program:
 
         return 0
 
-    def deactivate(self, pool_name: str, dataset_name: str | None) -> int:
+    def deactivate(self, pool_or_dataset_name: str) -> int:
         """
         Deactivates ZFS-based iSCSI targets and backstores, removing them from the configuration.
 
-        :param pool_name: The name of the pool to operate on.
-        :param dataset_name: The name of the dataset to operate on. Defaults to all datasets.
+        :param pool_or_dataset_name: The name of the pool to operate on.
         :return: The return code of the program.
         """
 
@@ -505,7 +507,11 @@ class Program:
         current_config = self._rts_root.dump()
 
         try:
-            logging.info("deactivating iSCSI configuration")
+            parts = pool_or_dataset_name.split('/')
+            pool_name = parts[0]
+            dataset_name = pool_or_dataset_name if len(parts) > 1 else None
+
+            logging.info(f"deactivating iSCSI configuration on {pool_or_dataset_name}")
             targets = self._get_managed_targets(pool_name)
 
             if dataset_name:
@@ -888,15 +894,15 @@ class Program:
 
 
 def activate(args: Namespace) -> int:
-    return Program().activate(args.pool_name, args.dataset_name)
+    return Program().activate(args.pool_or_dataset_name)
 
 
 def deactivate(args: Namespace) -> int:
-    return Program().deactivate(args.pool_name, args.dataset_name)
+    return Program().deactivate(args.pool_or_dataset_name)
 
 
 def reload(args: Namespace) -> int:
-    return Program().reload(args.pool_name, args.dataset_name)
+    return Program().reload(args.pool_or_dataset_name)
 
 
 def main() -> int:
@@ -904,18 +910,15 @@ def main() -> int:
     subparsers = parser.add_subparsers(help="sub-command help")
 
     activate_parser = subparsers.add_parser("activate", help="activate help")
-    activate_parser.add_argument('pool_name', help="The name of the pool to operate on")
-    activate_parser.add_argument("dataset_name", required=False, default=None, help="The name of the dataset to operate on. Defaults to all datasets in the pool")
+    activate_parser.add_argument('pool_or_dataset_name', help="The name of the pool or dataset to operate on")
     activate_parser.set_defaults(func=activate)
 
     deactivate_parser = subparsers.add_parser("deactivate", help="deactivate help")
-    deactivate_parser.add_argument('pool_name', help="The name of the pool to operate on")
-    deactivate_parser.add_argument("dataset_name", required=False, default=None, help="The name of the dataset to operate on. Defaults to all datasets in the pool")
+    deactivate_parser.add_argument('pool_or_dataset_name', help="The name of the pool or dataset to operate on")
     deactivate_parser.set_defaults(func=deactivate)
 
     reload_parser = subparsers.add_parser("reload", help="reload help")
-    reload_parser.add_argument('pool_name', help="The name of the pool to operate on")
-    reload_parser.add_argument("dataset_name", required=False, default=None, help="The name of the dataset to operate on. Defaults to all datasets in the pool")
+    reload_parser.add_argument('pool_or_dataset_name', help="The name of the pool to operate on")
     reload_parser.set_defaults(func=reload)
 
     args = parser.parse_args(sys.argv[1:])
