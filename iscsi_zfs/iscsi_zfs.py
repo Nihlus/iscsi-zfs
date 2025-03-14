@@ -2,29 +2,28 @@
 
 from __future__ import annotations
 
-import coloredlogs
 import configparser
 import logging
 import os
 import os.path
-import pathlib
 import re
 import stat
 import sys
-
 from argparse import ArgumentParser, Namespace
 from datetime import datetime
-from filelock import FileLock
 from functools import cached_property
 from itertools import groupby
-from libzfs import ZFS, ZFSPool, ZFSDataset, DatasetType, ZFS_PROPERTY_CONVERTERS, ZfsConverter
 from pathlib import Path
 from platform import node
+from typing import Iterator, Tuple, Iterable
+
+import coloredlogs
+from filelock import FileLock
+from libzfs import ZFS, ZFSPool, ZFSDataset, DatasetType, ZFS_PROPERTY_CONVERTERS, ZfsConverter
 from rtslib import NetworkPortal
 from rtslib_fb import RTSRoot, BlockStorageObject, Target, LUN, TPG
 from rtslib_fb.fabric import ISCSIFabricModule
 from slugify import slugify
-from typing import Iterator, Tuple, Iterable
 
 # native properties missing from the library
 ZFS_PROPERTY_CONVERTERS["guid"] = ZfsConverter(int, readonly=True)
