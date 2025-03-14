@@ -79,6 +79,27 @@ class IQN:
         """
         return f"iqn.{self.year:04}-{self.month:02}.{self.authority}:{self.unique_name}"
 
+    def __repr__(self):
+        """
+        Returns a printable representation of the instance.
+
+        :return: The printable representation.
+        """
+        return str(self)
+
+    def __eq__(self, __value):
+        """
+        Compares this instance to another for equality.
+
+        :param __value: The other instance.
+        :return: true if the values are equal; otherwise, false.
+        """
+        if not isinstance(__value, IQN):
+            return NotImplemented
+
+        return ((self.year, self.month, self.authority, self.unique_name) ==
+                (__value.year, __value.month, __value.authority, __value.unique_name))
+
     @staticmethod
     def parse(value: str) -> IQN:
         """
