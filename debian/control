@@ -21,7 +21,7 @@ Depends:
   ${shlibs:Depends},
   ${misc:Depends},
   ${python3:Depends},
-  python3-libzfs (>=0.0+git20230207.c1bd4a0)
+  python3-libzfs (>=2.3.1)
 Description: iSCSI integration for ZFS
  iscsi-zfs is an addon to the ZFS filesystem, enabling iSCSI export of volumes
  through the use of ZFS attributes.
