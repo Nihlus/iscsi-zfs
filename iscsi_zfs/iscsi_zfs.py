@@ -10,29 +10,107 @@ import re
 import stat
 import sys
 from argparse import ArgumentParser, Namespace
-from datetime import datetime
+from datetime import datetime, UTC
 from functools import cached_property
 from itertools import groupby
 from pathlib import Path
 from platform import node
-from typing import Iterator, Tuple, Iterable
+from typing import Iterator, Tuple, Iterable, Any, Generator
 
 import coloredlogs
 from filelock import FileLock
-from libzfs import ZFS, ZFSPool, ZFSDataset, DatasetType, ZFS_PROPERTY_CONVERTERS, ZfsConverter
+from libzfs_core import lzc_list_children, lzc_get_props
 from rtslib import NetworkPortal
 from rtslib_fb import RTSRoot, BlockStorageObject, Target, LUN, TPG
 from rtslib_fb.fabric import ISCSIFabricModule
 from slugify import slugify
 
-# native properties missing from the library
-ZFS_PROPERTY_CONVERTERS["guid"] = ZfsConverter(int, readonly=True)
+class ZFSDataset:
+    """
+    Represents a simple wrapper around a ZFS dataset. Properties are cached at time of creation.
+    """
 
-# our custom properties that need some extra configuration
-ZFS_PROPERTY_CONVERTERS["iscsi:share"] = ZfsConverter(bool)
-ZFS_PROPERTY_CONVERTERS["iscsi:lun"] = ZfsConverter(int)
-ZFS_PROPERTY_CONVERTERS["iscsi:chap"] = ZfsConverter(bool)
+    def __init__(self, name: bytes, parent: ZFSDataset | None = None):
+        """
+        Initializes a new instance of the ZFSDataset class.
 
+        :param name: The name of the dataset. This is typically a full "path" to the dataset.
+        :param parent: The dataset's parent, if any.
+        """
+
+        self._name = name
+
+        self.parent = parent
+        self.properties: dict[bytes, Any] = lzc_get_props(name)
+
+    def __str__(self) -> str:
+        """
+        Converts the instance to its string representation.
+
+        :return: The string representation of the IQN.
+        """
+        return self.name
+
+    @cached_property
+    def pool(self) -> ZFSDataset:
+        """
+        Gets the pool (root dataset) the dataset belongs to.
+        :return: The pool.
+        """
+
+        root = self
+        while root.parent:
+            root = root.parent
+
+        return root
+
+    @cached_property
+    def name(self) -> str:
+        """
+        Gets the name of the dataset.
+        :return: The name.
+        """
+
+        return self._name.decode("utf-8")
+
+    @cached_property
+    def guid(self) -> int:
+        """
+        Gets the ZFS GUID of the dataset.
+
+        :return: The GUID.
+        """
+
+        return int(self.properties[b"guid"])
+
+    @cached_property
+    def creation(self) -> datetime:
+        """
+        Gets the time at which the dataset was created.
+        :return: The time.
+        """
+
+        return datetime.fromtimestamp(int(self.properties.get(b"creation")), tz=UTC)
+
+    @cached_property
+    def type(self) -> str:
+        """
+        Gets the type of the dataset.
+
+        :return: The type.
+        """
+
+        return self.properties[b"type"]
+
+    def children(self) -> Generator[ZFSDataset]:
+        """
+        Gets a generator for all children underneath this dataset.
+
+        :return: The children.
+        """
+
+        for child in lzc_list_children(self._name):
+            yield ZFSDataset(child, self)
 
 class IQN:
     """
@@ -188,11 +266,11 @@ class ZFSiSCSIVolume:
         :return: The IQN.
         """
 
-        explicit_target = self.volume.properties.get("iscsi:target")
+        explicit_target = self.volume.properties.get(b"iscsi:target")
         if not explicit_target:
             return self._default_target_name
 
-        return IQN.parse(explicit_target.value)
+        return IQN.parse(explicit_target.decode("utf-8"))
 
     @cached_property
     def lun(self) -> int:
@@ -202,11 +280,11 @@ class ZFSiSCSIVolume:
 
         :return: The LUN number.
         """
-        iscsi_lun = self.volume.properties.get("iscsi:lun")
+        iscsi_lun = self.volume.properties.get(b"iscsi:lun")
         if not iscsi_lun:
             return 0
 
-        return iscsi_lun.parsed
+        return int(iscsi_lun)
 
     @cached_property
     def acls(self) -> list[str]:
@@ -218,11 +296,11 @@ class ZFSiSCSIVolume:
         :return: The ACLs, if any.
         """
 
-        iscsi_acls = self.volume.properties.get("iscsi:acls")
+        iscsi_acls = self.volume.properties.get(b"iscsi:acls")
         if not iscsi_acls:
             return []
 
-        return [acl for acl in iscsi_acls.value.split(";") if acl]
+        return [acl for acl in iscsi_acls.decode("utf-8").split(";") if acl]
 
     @cached_property
     def use_chap(self) -> bool:
@@ -237,11 +315,11 @@ class ZFSiSCSIVolume:
         :return: True if CHAP should be enabled; otherwise, false.
         """
 
-        iscsi_chap = self.volume.properties.get("iscsi:chap")
+        iscsi_chap = self.volume.properties.get(b"iscsi:chap")
         if not iscsi_chap:
             return True
 
-        return iscsi_chap.parsed
+        return bool(iscsi_chap)
 
     @cached_property
     def chap_credentials(self) -> Path:
@@ -255,12 +333,13 @@ class ZFSiSCSIVolume:
         """
 
         # explicit property comes first
-        iscsi_chap_credentials = self.volume.properties.get("iscsi:chap_credentials")
-        if iscsi_chap_credentials:
-            return Path(iscsi_chap_credentials.value)
+        iscsi_chap_credentials = self.volume.properties.get(b"iscsi:chap_credentials")
+        if not iscsi_chap_credentials:
+            # fall back to system-level default configuration
+            return Path("/") / "etc" / "iscsi-zfs" / "chap.conf"
 
-        # fall back to system-level default configuration
-        return Path("/") / "etc" / "iscsi-zfs" / "chap.conf"
+        return Path(iscsi_chap_credentials.decode("utf-8"))
+
 
     @cached_property
     def wwn(self) -> str:
@@ -313,9 +392,9 @@ class ZFSiSCSIVolume:
         :return: The portals, as pairs of IP addresses and port numbers.
         """
 
-        iscsi_portals = self.volume.properties.get("iscsi:portals")
+        iscsi_portals = self.volume.properties.get(b"iscsi:portals")
 
-        raw_portals = "0.0.0.0:3260" if not iscsi_portals else iscsi_portals.value
+        raw_portals = "0.0.0.0:3260" if not iscsi_portals else iscsi_portals.decode("utf-8")
         return [
             (address, int(port)) for (address, port) in [
                 raw_portal.split(":") for raw_portal in raw_portals.split(";")
@@ -330,8 +409,7 @@ class ZFSiSCSIVolume:
         :return: The time.
         """
 
-        creation = self.volume.properties.get("creation")
-        return creation.parsed
+        return self.volume.creation
 
     @cached_property
     def guid(self) -> int:
@@ -344,8 +422,7 @@ class ZFSiSCSIVolume:
         :return: The GUID.
         """
 
-        guid = self.volume.properties.get("guid")
-        return guid.parsed
+        return self.volume.guid
 
     @cached_property
     def _default_target_name(self) -> IQN:
@@ -424,7 +501,6 @@ class Program:
         Initializes a new instance of the Program class.
         """
 
-        self._zfs = ZFS()
         self._rts_root = RTSRoot()
         self._iscsi_module = ISCSIFabricModule()
         self._credential_cache: dict[Path, CHAPCredentials] = {}
@@ -470,7 +546,7 @@ class Program:
             logging.info(f"scanning for iSCSI configuration on {pool_or_dataset_name}")
 
             # pick out the enabled volumes only, ignoring the rest
-            iscsi_volumes = [volume for volume in self._get_zfs_iscsi_volumes(pool_name) if volume.enabled]
+            iscsi_volumes = [volume for volume in self._get_zfs_iscsi_volumes(pool_name.encode("utf-8")) if volume.enabled]
 
             if dataset_name:
                 # determine the iqn
@@ -515,7 +591,7 @@ class Program:
             targets = self._get_managed_targets(pool_name)
 
             if dataset_name:
-                iscsi_volumes = self._get_zfs_iscsi_volumes(pool_name)
+                iscsi_volumes = self._get_zfs_iscsi_volumes(pool_name.encode("utf-8"))
 
                 # determine target name of the dataset
                 dataset_volume = next((volume for volume in iscsi_volumes if volume.volume.name == dataset_name), None)
@@ -843,7 +919,8 @@ class Program:
             if IQN.parse(target.wwn).unique_name.startswith(target_prefix)
         )
 
-    def _get_zfs_iscsi_volumes(self, pool_name: str) -> list[ZFSiSCSIVolume]:
+    @staticmethod
+    def _get_zfs_iscsi_volumes(pool_name: bytes) -> list[ZFSiSCSIVolume]:
         """
         Recursively searches the named ZFS pool for iSCSI-enabled ZFS volumes, loading their desired configuration into
         usable objects.
@@ -860,20 +937,18 @@ class Program:
             :param parent: The ZFS dataset to scan.
             :return: The iSCSI-enabled ZFS volumes, if any.
             """
-            logging.debug(f"scanning {parent.name} for iSCSI-enabled volumes")
+            logging.debug(f"scanning {parent} for iSCSI-enabled volumes")
 
             volumes: list[ZFSiSCSIVolume] = []
 
-            for dataset in parent.children:
-                if dataset.type is not DatasetType.VOLUME:
+            for dataset in parent.children():
+                if dataset.type is not "volume":
                     volumes.extend(_get_parented_iscsi_volumes(dataset))
                     continue
 
-                iscsi_share = dataset.properties.get("iscsi:share")
+                iscsi_share = bool(dataset.properties.get(b"iscsi:share"))
 
                 if not iscsi_share:
-                    iscsi_share = False
-                elif not iscsi_share.parsed:
                     continue
 
                 logging.debug(f"found iSCSI configuration for {dataset.name}")
@@ -881,9 +956,8 @@ class Program:
 
             return volumes
 
-        pool: ZFSPool | None = next((pool for pool in self._zfs.pools if pool.name == pool_name), None)
-
-        return _get_parented_iscsi_volumes(pool.root_dataset)
+        root = ZFSDataset(pool_name)
+        return _get_parented_iscsi_volumes(root)
 
 
 def activate(args: Namespace) -> int:
